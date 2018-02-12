@@ -341,18 +341,20 @@ def train(create_tensor_dict_fn, create_model_fn, train_config, master, task,
     keep_checkpoint_every_n_hours = train_config.keep_checkpoint_every_n_hours
     saver = tf.train.Saver(
         keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours)
-
-    slim.learning.train(
-        train_tensor,
-        logdir=train_dir,
-        master=master,
-        is_chief=is_chief,
-        session_config=session_config,
-        startup_delay_steps=train_config.startup_delay_steps,
-        init_fn=init_fn,
-        summary_op=summary_op,
-        number_of_steps=(
-            train_config.num_steps if train_config.num_steps else None),
-        save_summaries_secs=120,
-        sync_optimizer=sync_optimizer,
-        saver=saver)
+    try:
+        slim.learning.train(
+            train_tensor,
+            logdir=train_dir,
+            master=master,
+            is_chief=is_chief,
+            session_config=session_config,
+            startup_delay_steps=train_config.startup_delay_steps,
+            init_fn=init_fn,
+            summary_op=summary_op,
+            number_of_steps=(
+                train_config.num_steps if train_config.num_steps else None),
+            save_summaries_secs=120,
+            sync_optimizer=sync_optimizer,
+            saver=saver)
+    except KeyboardInterrupt:
+        print("ctrl-c END")
