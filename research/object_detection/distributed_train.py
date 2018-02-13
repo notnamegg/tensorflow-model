@@ -76,7 +76,7 @@ def main(_):
 			cmd="python "+myprog+" --pipeline_config_path="+FLAGS.pipeline_config_path+" --train_dir="+FLAGS.train_dir
 			myargv = sys.argv
 			print(cmd)
-			proc = subprocess.Popen(cmd, shell=True, stderr=subprocess.STDOUT,env=my_env)
+			proc = subprocess.Popen(cmd, shell=True,env=my_env)
 			(out, err) = proc.communicate()
 			if proc.returncode == 0:
 				break
@@ -86,6 +86,7 @@ def main(_):
 				time.sleep(30)
 			# train.main(_)
 		except KeyboardInterrupt:
+			print("Ctrl c END")
 			break
 		except:
 			tb = traceback.format_exc()
