@@ -83,6 +83,16 @@ flags.DEFINE_string('model_config_path', '',
 
 FLAGS = flags.FLAGS
 
+def create_done_queue(i, qlen):
+  """Queue used to signal death for i'th ps shard. Intended to have
+  all workers enqueue an item onto it to signal doneness."""
+
+  with tf.device("/job:ps/task:%d" % (i)):
+    return tf.FIFOQueue(qlen, tf.int32, shared_name="done_queue"+
+                        str(i))
+
+def create_done_queues(qlen):
+  return [create_done_queue(i, qlen) for i in range(FLAGS.ps_tasks)]
 
 def main(_):
   assert FLAGS.train_dir, '`train_dir` is missing.'
@@ -122,11 +132,12 @@ def main(_):
   create_input_dict_fn = functools.partial(get_next, input_config)
 
   env = json.loads(os.environ.get('TF_CONFIG', '{}'))
+  print("%s" %str(env))
   cluster_data = env.get('cluster', None)
   cluster = tf.train.ClusterSpec(cluster_data) if cluster_data else None
   task_data = env.get('task', None) or {'type': 'master', 'index': 0}
   task_info = type('TaskSpec', (object,), task_data)
-
+  print("cluster_data %s" %str(cluster_data))
   # Parameters for a single worker.
   ps_tasks = 0
   worker_replicas = 1
@@ -146,22 +157,47 @@ def main(_):
 
   if worker_replicas >= 1 and ps_tasks > 0:
     # Set up distributed training.
-    server = tf.train.Server(tf.train.ClusterSpec(cluster), protocol='grpc',
-                             job_name=task_info.type,
-                             task_index=task_info.index)
+    try:
+      print("tf.train.Server")
+      server = tf.train.Server(tf.train.ClusterSpec(cluster), protocol='grpc',
+                               job_name=task_info.type,
+                               task_index=task_info.index)
+    except KeyboardInterrupt:
+          print("ctrl c END")
     if task_info.type == 'ps':
-      server.join()
-      return
+      print("ps")
+      try:
+          print("tf.Session")
+          sess = tf.Session(server.target)
+          print("create_done_queue")
+          queue = create_done_queue(task_info.index, worker_replicas)
+
+          # wait until all workers are done
+          for i in range(worker_replicas):
+            sess.run(queue.dequeue())
+            print("ps %d received done %d" % (task_info.index, i))
+
+          print("ps %d: quitting"%(task_info.index))
+          # server.join()
+          return
+      except KeyboardInterrupt:
+          print("ctrl c END")
 
     worker_job_name = '%s/task:%d' % (task_info.type, task_info.index)
     task = task_info.index
     is_chief = (task_info.type == 'master')
     master = server.target
+    print("is_chief:"+str(is_chief))
 
-  trainer.train(create_input_dict_fn, model_fn, train_config, master, task,
-                FLAGS.num_clones, worker_replicas, FLAGS.clone_on_cpu, ps_tasks,
-                worker_job_name, is_chief, FLAGS.train_dir)
-
+    try:
+          trainer.train(create_input_dict_fn, model_fn, train_config, master, task,
+                        FLAGS.num_clones, worker_replicas, FLAGS.clone_on_cpu, ps_tasks,
+                        worker_job_name, is_chief, FLAGS.train_dir)
+    except KeyboardInterrupt:
+          print("ctrl c END")
+    finally:
+          for q in create_done_queues(worker_replicas):
+            sess.run(q.enqueue(1))
 
 if __name__ == '__main__':
   tf.app.run()
