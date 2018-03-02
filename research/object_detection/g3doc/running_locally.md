@@ -45,6 +45,21 @@ where `${PATH_TO_YOUR_PIPELINE_CONFIG}` points to the pipeline config and
 and events will be written to. By default, the training job will
 run indefinitely until the user kills it.
 
+## Running the distributed Training Job
+
+Wrapper for distributed training on different hosts, hosts seprated as "ps", "master" and "worker"
+There is an example cluster master(192.168.1.52), ps(192.168.1.52), worker(192.168.1.29).
+For the default port for master, ps, worker are 3000, 3001 and 3002
+Here is example command for master. 
+For different type of rule, your should just change "type" paramter.
+
+```bash
+# From the tensorflow/models/research/ directory
+python object_detection/distributed_train.py --type=master --id=0 \
+    --master=192.168.1.52 --ps=192.168.1.52 --worker=192.168.1.29 \
+    --train_dir=/tmp/train2_log --pipeline_config_path=object_detection/samples/configs/faster_rcnn_resnet101.config
+```
+
 ## Running the Evaluation Job
 
 Evaluation is run as a separate job. The eval job will periodically poll the
