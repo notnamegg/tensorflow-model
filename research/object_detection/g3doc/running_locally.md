@@ -51,14 +51,17 @@ Wrapper for distributed training on different hosts, hosts seprated as "ps", "ma
 There is an example cluster master(192.168.1.52), ps(192.168.1.52), worker(192.168.1.29).
 For the default port for master, ps, worker are 3000, 3001 and 3002
 Here is example command for master. 
-For different type of rule, your should just change "type" paramter.
+For different type of rule, your should just change "type" paramter and running it in each host.
 
 ```bash
 # From the tensorflow/models/research/ directory
 python object_detection/distributed_train.py --type=master --id=0 \
     --master=192.168.1.52 --ps=192.168.1.52 --worker=192.168.1.29 \
-    --train_dir=/tmp/train2_log --pipeline_config_path=object_detection/samples/configs/faster_rcnn_resnet101.config
+    --train_dir=/tmp/train2_log \
+    --pipeline_config_path=object_detection/samples/configs/faster_rcnn_resnet101.config
 ```
+
+It will automatic retry job after 60 second if any execption happened.
 
 ## Running the Evaluation Job
 
