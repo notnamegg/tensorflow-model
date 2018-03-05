@@ -55,7 +55,7 @@ def write_metrics(metrics, global_step, summary_dir, pr_value=None):
         # since it always generates much more than 10,000 points in the pr curve, which is not necessary to plot all these point into the PR curve.
         num_thresholds = min(500, len(pr_value[key]['precisions']))
         if num_thresholds != len(pr_value[key]['precisions']):
-          gap = len(pr_value[key]['precisions']) / num_thresholds
+          gap = int(len(pr_value[key]['precisions']) / num_thresholds)
           pr_value[key]['precisions'] = np.append(pr_value[key]['precisions'][::gap], pr_value[key]['precisions'][-1])
           pr_value[key]['recalls'] = np.append(pr_value[key]['recalls'][::gap], pr_value[key]['recalls'][-1])
           num_thresholds = len(pr_value[key]['precisions'])
