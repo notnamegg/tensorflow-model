@@ -1,7 +1,8 @@
 FROM gcr.io/tensorflow/tensorflow:1.5.0-gpu-py3
 MAINTAINER notname "notname@gmail.com"
 ENV data /data
-WORKDIR data
+ENV reponame notnamegg-tensorflow-Distributed-training
+WORKDIR ${data}
 # Update aptitude with new repo
 RUN apt-get update
 
@@ -11,7 +12,7 @@ RUN apt-get install -y git
 RUN mkdir /root/.ssh/
 
 # Copy over private key, and set permissions
-RUN apt-get -y install openssh-client
+RUN apt-get -y install openssh-client protobuf-compiler vim psmisc
 RUN ssh-keygen -q -t rsa -N '' -f /root/.ssh/id_rsa
 
 # Create known_hosts
@@ -20,9 +21,13 @@ RUN touch /root/.ssh/known_hosts
 RUN ssh-keyscan github.com >> /root/.ssh/known_hosts
 
 # clone latest code 
-RUN git clone https://github.com/notnamegg/notnamegg-tensorflow-Distributed-training.git
-RUN cd notnamegg-tensorflow-Distributed-training && git submodule init
-RUN cd notnamegg-tensorflow-Distributed-training && git submodule update
-RUN cd notnamegg-tensorflow-Distributed-training/models && git remote add github https://github.com/notnamegg/tensorflow-model.git
-RUN cd notnamegg-tensorflow-Distributed-training/models && git fetch github
-RUN cd notnamegg-tensorflow-Distributed-training/models && git pull github master
+RUN git clone https://github.com/notnamegg/${reponame}.git
+RUN cd ${reponame} && git submodule init
+RUN cd ${reponame} && git submodule update
+RUN cd ${reponame}/models && git remote add github https://github.com/notnamegg/tensorflow-model.git
+RUN cd ${reponame}/models && git fetch github
+RUN cd ${reponame}/models && git pull github master
+# install object_detection 
+RUN cd ${reponame}/models/research && protoc object_detection/protos/*.proto --python_out=.
+RUN echo "export RESEARCHPATH=${data}/${reponame}/models/research" >> /root/.bashrc
+RUN echo 'export PYTHONPATH=$PYTHONPATH:$RESEARCHPATH:$RESEARCHPATH/slim' >> /root/.bashrc
