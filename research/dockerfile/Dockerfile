@@ -31,3 +31,7 @@ RUN cd ${reponame}/models && git pull github master
 RUN cd ${reponame}/models/research && protoc object_detection/protos/*.proto --python_out=.
 RUN echo "export RESEARCHPATH=${data}/${reponame}/models/research" >> /root/.bashrc
 RUN echo 'export PYTHONPATH=$PYTHONPATH:$RESEARCHPATH:$RESEARCHPATH/slim' >> /root/.bashrc
+
+EXPOSE 3000
+EXPOSE 3001
+EXPOSE 3002
