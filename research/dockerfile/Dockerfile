@@ -24,6 +24,8 @@ RUN ssh-keyscan github.com >> /root/.ssh/known_hosts
 RUN git clone https://github.com/notnamegg/${reponame}.git
 RUN cd ${reponame} && git submodule init
 RUN cd ${reponame} && git submodule update
+RUN pip install cython
+RUN cd ${reponame}/cocoapi/PythonAPI && make && make install && python setup.py install
 RUN cd ${reponame}/models && git remote add github https://github.com/notnamegg/tensorflow-model.git
 RUN cd ${reponame}/models && git fetch github
 RUN cd ${reponame}/models && git pull github master
