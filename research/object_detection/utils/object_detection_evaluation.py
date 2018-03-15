@@ -262,24 +262,33 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
       2. per_category_ap: category specific results with keys of the form
         'PerformanceByCategory/mAP@<matching_iou_threshold>IOU/category'.
     """
-    (per_class_ap, mean_ap, _, _, per_class_corloc, mean_corloc) = (
+    (per_class_ap, mean_ap, precisions_per_class, recalls_per_class, per_class_corloc, mean_corloc) = (
         self._evaluation.evaluate())
     pascal_metrics = {
         self._metric_prefix +
         'Precision/mAP@{}IOU'.format(self._matching_iou_threshold):
             mean_ap
     }
+    pr_value = {}
+
     if self._evaluate_corlocs:
       pascal_metrics[self._metric_prefix + 'Precision/meanCorLoc@{}IOU'.format(
           self._matching_iou_threshold)] = mean_corloc
     category_index = label_map_util.create_category_index(self._categories)
     for idx in range(per_class_ap.size):
-      if idx + self._label_id_offset in category_index:
+      if idx + self._label_id_offset in category_index \
+      and idx < len(precisions_per_class) \
+      and idx < len(recalls_per_class):
         display_name = (
             self._metric_prefix + 'PerformanceByCategory/AP@{}IOU/{}'.format(
                 self._matching_iou_threshold,
                 category_index[idx + self._label_id_offset]['name']))
         pascal_metrics[display_name] = per_class_ap[idx]
+
+        # PR curve
+        display_name = (
+            'PR_curve@{}'.format(category_index[idx + self._label_id_offset]['name']))
+        pr_value[display_name] = {'precisions': precisions_per_class[idx], 'recalls': recalls_per_class[idx]}
 
         # Optionally add CorLoc metrics.classes
         if self._evaluate_corlocs:
@@ -289,7 +298,7 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
                       category_index[idx + self._label_id_offset]['name']))
           pascal_metrics[display_name] = per_class_corloc[idx]
 
-    return pascal_metrics
+    return pascal_metrics, pr_value
 
   def clear(self):
     """Clears the state to prepare for a fresh evaluation."""
