@@ -24,7 +24,6 @@ flags.DEFINE_string('workerport2nd', '3003', 'port of second worker.')
 FLAGS = flags.FLAGS
 def main(_):
 	assert FLAGS.type, '`type` is missing.'
-	assert FLAGS.worker, '`worker` is missing.'
 	assert FLAGS.ps, '`ps` is missing.'
 	assert FLAGS.master, '`master` is missing.'
 	if FLAGS.type == "master":
@@ -50,11 +49,13 @@ def main(_):
 	cluster['ps']=pslist
 	workerlist=[]
 	for w in wklst:
-		workerlist.append(w+":"+FLAGS.workerport)
+		if w != "" :
+			workerlist.append(w+":"+FLAGS.workerport)
 	for w2 in wklst2nd:
 		if w2 != "":
 			workerlist.append(w2+":"+FLAGS.workerport2nd)
-	cluster['worker']=workerlist
+	if len(workerlist) != 0:
+		cluster['worker']=workerlist
 	tf_config['cluster']=cluster
 	task={}
 	task['index']=FLAGS.id
