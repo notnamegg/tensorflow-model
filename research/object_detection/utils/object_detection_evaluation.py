@@ -276,7 +276,9 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
           self._matching_iou_threshold)] = mean_corloc
     category_index = label_map_util.create_category_index(self._categories)
     for idx in range(per_class_ap.size):
-      if idx + self._label_id_offset in category_index:
+      if idx + self._label_id_offset in category_index \
+      and idx < len(precisions_per_class) \
+      and idx < len(recalls_per_class):
         display_name = (
             self._metric_prefix + 'PerformanceByCategory/AP@{}IOU/{}'.format(
                 self._matching_iou_threshold,
