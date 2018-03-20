@@ -46,7 +46,7 @@ Example usage:
 import functools
 import os
 import tensorflow as tf
-
+import logging
 from object_detection import evaluator
 from object_detection.builders import dataset_builder
 from object_detection.builders import model_builder
@@ -56,7 +56,7 @@ from object_detection.utils import label_map_util
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
-
+logging.basicConfig(level=logging.INFO)
 flags = tf.app.flags
 flags.DEFINE_boolean('eval_training_data', False,
                      'If training data should be evaluated for this job.')
