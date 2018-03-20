@@ -23,7 +23,7 @@ import sys
 
 import tensorflow as tf
 
-import resnet
+from official.resnet import resnet
 
 _HEIGHT = 32
 _WIDTH = 32
@@ -131,12 +131,17 @@ def input_fn(is_training, data_dir, batch_size, num_epochs=1,
       examples_per_epoch=num_images, multi_gpu=multi_gpu)
 
 
+def get_synth_input_fn():
+  return resnet.get_synth_input_fn(_HEIGHT, _WIDTH, _NUM_CHANNELS, _NUM_CLASSES)
+
+
 ###############################################################################
 # Running the model
 ###############################################################################
 class Cifar10Model(resnet.Model):
 
-  def __init__(self, resnet_size, data_format=None, num_classes=_NUM_CLASSES):
+  def __init__(self, resnet_size, data_format=None, num_classes=_NUM_CLASSES,
+      version=resnet.DEFAULT_VERSION):
     """These are the parameters that work for CIFAR-10 data.
 
     Args:
@@ -145,6 +150,8 @@ class Cifar10Model(resnet.Model):
         data format to use when setting up the model.
       num_classes: The number of output classes needed from the model. This
         enables users to extend the same model to their own datasets.
+      version: Integer representing which version of the ResNet network to use.
+        See README for details. Valid values: [1, 2]
     """
     if resnet_size % 6 != 2:
       raise ValueError('resnet_size must be 6n + 2:', resnet_size)
@@ -153,6 +160,7 @@ class Cifar10Model(resnet.Model):
 
     super(Cifar10Model, self).__init__(
         resnet_size=resnet_size,
+        bottleneck=False,
         num_classes=num_classes,
         num_filters=16,
         kernel_size=3,
@@ -161,10 +169,10 @@ class Cifar10Model(resnet.Model):
         first_pool_stride=None,
         second_pool_size=8,
         second_pool_stride=1,
-        block_fn=resnet.building_block,
         block_sizes=[num_blocks] * 3,
         block_strides=[1, 2, 2],
         final_size=64,
+        version=version,
         data_format=data_format)
 
 
@@ -195,12 +203,14 @@ def cifar10_model_fn(features, labels, mode, params):
                                 learning_rate_fn=learning_rate_fn,
                                 momentum=0.9,
                                 data_format=params['data_format'],
+                                version=params['version'],
                                 loss_filter_fn=loss_filter_fn,
                                 multi_gpu=params['multi_gpu'])
 
 
 def main(unused_argv):
-  resnet.resnet_main(FLAGS, cifar10_model_fn, input_fn)
+  input_function = FLAGS.use_synthetic_data and get_synth_input_fn() or input_fn
+  resnet.resnet_main(FLAGS, cifar10_model_fn, input_function)
 
 
 if __name__ == '__main__':
