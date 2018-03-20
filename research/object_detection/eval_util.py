@@ -49,32 +49,32 @@ def write_metrics(metrics, global_step, summary_dir, pr_value=None):
     ])
     summary_writer.add_summary(summary, global_step)
     logging.info('%s: %f', key, metrics[key])
-    if pr_value is not None:
-      for key in sorted(pr_value):
-        # this part is used to control the delicate of the pr curve. 
-        # since it always generates much more than 10,000 points in the pr curve, which is not necessary to plot all these point into the PR curve.
-        num_thresholds = min(500, len(pr_value[key]['precisions']))
-        if num_thresholds != len(pr_value[key]['precisions']):
-          gap = int(len(pr_value[key]['precisions']) / num_thresholds)
-          pr_value[key]['precisions'] = np.append(pr_value[key]['precisions'][::gap], pr_value[key]['precisions'][-1])
-          pr_value[key]['recalls'] = np.append(pr_value[key]['recalls'][::gap], pr_value[key]['recalls'][-1])
-          num_thresholds = len(pr_value[key]['precisions'])
-          # the pr_curve_raw_data_pb() needs the a ascending precisions array and a descending recalls array
-        pr_value[key]['precisions'].sort()
-        pr_value[key]['recalls'][::-1].sort()
-        #write pr curve
-        summary = summary_lib.pr_curve_raw_data_pb(
-          name=key,
-          true_positive_counts=-np.ones(num_thresholds),
-          false_positive_counts=-np.ones(num_thresholds),
-          true_negative_counts=-np.ones(num_thresholds),
-          false_negative_counts=-np.ones(num_thresholds),
-          precision=pr_value[key]['precisions'],
-          recall=pr_value[key]['recalls'],
-          num_thresholds=num_thresholds
-          )
-        summary_writer.add_summary(summary, global_step)
-        logging.info('%s: %f', key, pr_value[key])
+  if pr_value is not None:
+    for key in sorted(pr_value):
+      # this part is used to control the delicate of the pr curve. 
+      # since it always generates much more than 10,000 points in the pr curve, which is not necessary to plot all these point into the PR curve.
+      num_thresholds = min(500, len(pr_value[key]['precisions']))
+      if num_thresholds != len(pr_value[key]['precisions']):
+        gap = int(len(pr_value[key]['precisions']) / num_thresholds)
+        pr_value[key]['precisions'] = np.append(pr_value[key]['precisions'][::gap], pr_value[key]['precisions'][-1])
+        pr_value[key]['recalls'] = np.append(pr_value[key]['recalls'][::gap], pr_value[key]['recalls'][-1])
+        num_thresholds = len(pr_value[key]['precisions'])
+        # the pr_curve_raw_data_pb() needs the a ascending precisions array and a descending recalls array
+      pr_value[key]['precisions'].sort()
+      pr_value[key]['recalls'][::-1].sort()
+      #write pr curve
+      summary = summary_lib.pr_curve_raw_data_pb(
+        name=key,
+        true_positive_counts=-np.ones(num_thresholds),
+        false_positive_counts=-np.ones(num_thresholds),
+        true_negative_counts=-np.ones(num_thresholds),
+        false_negative_counts=-np.ones(num_thresholds),
+        precision=pr_value[key]['precisions'],
+        recall=pr_value[key]['recalls'],
+        num_thresholds=num_thresholds
+        )
+      summary_writer.add_summary(summary, global_step)
+  summary_writer.close()
   logging.info('Metrics written to tf summary.')
 
 
@@ -435,6 +435,8 @@ def repeated_checkpoint_run(tensor_dict,
                                                   save_graph_dir)
       write_metrics(metrics=metrics, pr_value=pr_value, global_step=global_step, summary_dir=summary_dir)
     number_of_evaluations += 1
+    logging.info('number_of_evaluations: '+str(number_of_evaluations))
+    logging.info('eval_interval_secs: '+str(eval_interval_secs))
 
     if (max_number_of_evaluations and
         number_of_evaluations >= max_number_of_evaluations):
