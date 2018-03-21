@@ -20,7 +20,9 @@ RUN touch /root/.ssh/known_hosts
 # Generate ssh key
 RUN ssh-keyscan github.com >> /root/.ssh/known_hosts
 
-# clone latest code 
+# clone latest code
+RUN username=$(whoami) && git config --global user.email "${username}@github.com"
+RUN username=$(whoami) && git config --global user.name "${username}"
 RUN git clone https://github.com/notnamegg/${reponame}.git
 RUN cd ${reponame} && git submodule init
 RUN cd ${reponame} && git submodule update
