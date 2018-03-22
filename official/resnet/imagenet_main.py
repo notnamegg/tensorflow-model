@@ -21,10 +21,11 @@ from __future__ import print_function
 import os
 import sys
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-bad-import-order
 
-from official.resnet import resnet
 from official.resnet import imagenet_preprocessing
+from official.resnet import resnet_model
+from official.resnet import resnet_run_loop
 
 _DEFAULT_IMAGE_SIZE = 224
 _NUM_CHANNELS = 3
@@ -156,6 +157,7 @@ def parse_record(raw_record, is_training):
 def input_fn(is_training, data_dir, batch_size, num_epochs=1,
              num_parallel_calls=1, multi_gpu=False):
   """Input function which provides batches for train or eval.
+
   Args:
     is_training: A boolean denoting whether the input is for training.
     data_dir: The directory containing the input data.
@@ -183,24 +185,25 @@ def input_fn(is_training, data_dir, batch_size, num_epochs=1,
   # Convert to individual records
   dataset = dataset.flat_map(tf.data.TFRecordDataset)
 
-  return resnet.process_record_dataset(
+  return resnet_run_loop.process_record_dataset(
       dataset, is_training, batch_size, _SHUFFLE_BUFFER, parse_record,
       num_epochs, num_parallel_calls, examples_per_epoch=num_images,
       multi_gpu=multi_gpu)
 
 
 def get_synth_input_fn():
-  return resnet.get_synth_input_fn(
-        _DEFAULT_IMAGE_SIZE, _DEFAULT_IMAGE_SIZE, _NUM_CHANNELS, _NUM_CLASSES)
+  return resnet_run_loop.get_synth_input_fn(
+      _DEFAULT_IMAGE_SIZE, _DEFAULT_IMAGE_SIZE, _NUM_CHANNELS, _NUM_CLASSES)
 
 
 ###############################################################################
 # Running the model
 ###############################################################################
-class ImagenetModel(resnet.Model):
+class ImagenetModel(resnet_model.Model):
+  """Model class with appropriate defaults for Imagenet data."""
 
   def __init__(self, resnet_size, data_format=None, num_classes=_NUM_CLASSES,
-    version=resnet.DEFAULT_VERSION):
+               version=resnet_model.DEFAULT_VERSION):
     """These are the parameters that work for Imagenet data.
 
     Args:
@@ -240,9 +243,20 @@ class ImagenetModel(resnet.Model):
 
 
 def _get_block_sizes(resnet_size):
-  """The number of block layers used for the Resnet model varies according
+  """Retrieve the size of each block_layer in the ResNet model.
+
+  The number of block layers used for the Resnet model varies according
   to the size of the model. This helper grabs the layer set we want, throwing
   an error if a non-standard size has been selected.
+
+  Args:
+    resnet_size: The number of convolutional layers needed in the model.
+
+  Returns:
+    A list of block sizes to use in building the model.
+
+  Raises:
+    KeyError: if invalid resnet_size is received.
   """
   choices = {
       18: [2, 2, 2, 2],
@@ -264,31 +278,36 @@ def _get_block_sizes(resnet_size):
 
 def imagenet_model_fn(features, labels, mode, params):
   """Our model_fn for ResNet to be used with our Estimator."""
-  learning_rate_fn = resnet.learning_rate_with_decay(
+  learning_rate_fn = resnet_run_loop.learning_rate_with_decay(
       batch_size=params['batch_size'], batch_denom=256,
       num_images=_NUM_IMAGES['train'], boundary_epochs=[30, 60, 80, 90],
       decay_rates=[1, 0.1, 0.01, 0.001, 1e-4])
 
-  return resnet.resnet_model_fn(features, labels, mode, ImagenetModel,
-                                resnet_size=params['resnet_size'],
-                                weight_decay=1e-4,
-                                learning_rate_fn=learning_rate_fn,
-                                momentum=0.9,
-                                data_format=params['data_format'],
-                                version=params['version'],
-                                loss_filter_fn=None,
-                                multi_gpu=params['multi_gpu'])
+  return resnet_run_loop.resnet_model_fn(features, labels, mode, ImagenetModel,
+                                         resnet_size=params['resnet_size'],
+                                         weight_decay=1e-4,
+                                         learning_rate_fn=learning_rate_fn,
+                                         momentum=0.9,
+                                         data_format=params['data_format'],
+                                         version=params['version'],
+                                         loss_filter_fn=None,
+                                         multi_gpu=params['multi_gpu'])
 
 
-def main(unused_argv):
-  input_function = FLAGS.use_synthetic_data and get_synth_input_fn() or input_fn
-  resnet.resnet_main(FLAGS, imagenet_model_fn, input_function)
+def main(argv):
+  parser = resnet_run_loop.ResnetArgParser(
+      resnet_size_choices=[18, 34, 50, 101, 152, 200])
+
+  parser.set_defaults(
+      train_epochs=100
+  )
+
+  flags = parser.parse_args(args=argv[1:])
+
+  input_function = flags.use_synthetic_data and get_synth_input_fn() or input_fn
+  resnet_run_loop.resnet_main(flags, imagenet_model_fn, input_function)
 
 
 if __name__ == '__main__':
   tf.logging.set_verbosity(tf.logging.INFO)
-
-  parser = resnet.ResnetArgParser(
-      resnet_size_choices=[18, 34, 50, 101, 152, 200])
-  FLAGS, unparsed = parser.parse_known_args()
-  tf.app.run(argv=[sys.argv[0]] + unparsed)
+  main(argv=sys.argv)
