@@ -11,7 +11,7 @@ Reference: https://blog.csdn.net/miaomiaoyuan/article/details/56865361
 
 import os 
 import tensorflow as tf 
-from PIL import Image  #注意Image,后面会用到
+from PIL import Image  
 import matplotlib.pyplot as plt 
 import numpy as np
 
@@ -28,14 +28,14 @@ def number_of_jpeg(filename):
     return number
 
 
-#filename_queue = tf.train.string_input_producer(["train.record"]) #读入流中
+#filename_queue = tf.train.string_input_producer(["train.record"]) 
 def main(_):
     assert FLAGS.tfrecord, '`tfrecord` is missing.'
     filename=[FLAGS.tfrecord]
     number = number_of_jpeg(filename)
-    filename_queue = tf.train.string_input_producer(filename) #读入流中
+    filename_queue = tf.train.string_input_producer(filename) #read tfrecord
     reader = tf.TFRecordReader()
-    _, serialized_example = reader.read(filename_queue)   #返回文件名和文件
+    _, serialized_example = reader.read(filename_queue)   
     features = tf.parse_single_example(serialized_example,
                                        features={
                                            'image/height': tf.FixedLenFeature([], tf.int64),
@@ -46,13 +46,13 @@ def main(_):
                                            'image/object/bbox/ymax': tf.FixedLenFeature([], tf.float32),
                                            'image/object/class/label': tf.FixedLenFeature([], tf.int64),
                                            'image/encoded' : tf.FixedLenFeature([], tf.string),
-                                       })  #取出包含image和label的feature对象
+                                       })  #get features
     image = tf.image.decode_jpeg(features['image/encoded'])
     #image = tf.reshape(image, [300, 300, 3])
     label = tf.cast(features['image/object/class/label'], tf.int32)
     if not os.path.exists(FLAGS.output_filepath):
         os.makedirs(FLAGS.output_filepath)
-    with tf.Session() as sess: #开始一个会话
+    with tf.Session() as sess: 
         init_op = tf.initialize_all_variables()
         sess.run(init_op)
         coord=tf.train.Coordinator()
@@ -65,10 +65,7 @@ def main(_):
         t_yM = tf.cast(features['image/object/bbox/ymax'], tf.float32)
         for i in range(number):
             #image = tf.reshape(image, [w, h, 3])
-            example, l ,w,h,xm,xM,ym,yM= sess.run([image,label,t_w,t_h,t_xm,t_xM,t_ym,t_yM])#在会话中取出image和label
-            #img=Image.fromarray(example, 'RGB')#这里Image是之前提到的
-            #img.save(cwd+str(i)+'_''Label_'+str(l)+'.jpg')#存下图片
-            #img_data_jpg = tf.image.decode_jpeg(example)
+            example, l ,w,h,xm,xM,ym,yM= sess.run([image,label,t_w,t_h,t_xm,t_xM,t_ym,t_yM])
             img_data_jpg = tf.image.convert_image_dtype(example, dtype=tf.uint8) 
             encode_image_jpg = tf.image.encode_jpeg(img_data_jpg)
             folder = FLAGS.output_filepath
