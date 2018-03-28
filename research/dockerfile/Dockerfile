@@ -12,7 +12,7 @@ RUN apt-get install -y git
 RUN mkdir /root/.ssh/
 
 # Copy over private key, and set permissions
-RUN apt-get -y install openssh-client protobuf-compiler vim psmisc
+RUN apt-get -y install openssh-client protobuf-compiler vim psmisc python3-tk
 RUN ssh-keygen -q -t rsa -N '' -f /root/.ssh/id_rsa
 
 # Create known_hosts
