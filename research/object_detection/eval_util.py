@@ -76,7 +76,7 @@ def write_metrics(metrics, global_step, summary_dir, pr_value=None):
         num_thresholds=num_thresholds
         )
       summary_writer.add_summary(summary, global_step)
-  summary_writer.close()
+  #summary_writer.close()
   logging.info('Metrics written to tf summary.')
 
 
