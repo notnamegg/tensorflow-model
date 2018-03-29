@@ -83,16 +83,16 @@ flags.DEFINE_string('model_config_path', '',
 
 FLAGS = flags.FLAGS
 
-def create_done_queue(i, qlen):
+def create_done_queue(i, qlen,ps_tasks):
   """Queue used to signal death for i'th ps shard. Intended to have
   all workers enqueue an item onto it to signal doneness."""
-
+  print("task:"+str(i))
   with tf.device("/job:ps/task:%d" % (i)):
     return tf.FIFOQueue(qlen, tf.int32, shared_name="done_queue"+
                         str(i))
 
-def create_done_queues(qlen):
-  return [create_done_queue(i, qlen) for i in range(FLAGS.ps_tasks)]
+def create_done_queues(qlen,ps_tasks):
+  return [create_done_queue(i, qlen, ps_tasks) for i in range(ps_tasks)]
 
 def main(_):
   assert FLAGS.train_dir, '`train_dir` is missing.'
@@ -169,8 +169,8 @@ def main(_):
       try:
           print("tf.Session")
           sess = tf.Session(server.target)
-          print("create_done_queue")
-          queue = create_done_queue(task_info.index, worker_replicas)
+          print("create_done_queue: "+str(worker_replicas))
+          queue = create_done_queue(task_info.index, worker_replicas,ps_tasks)
 
           # wait until all workers are done
           for i in range(worker_replicas):
@@ -194,9 +194,13 @@ def main(_):
                         FLAGS.num_clones, worker_replicas, FLAGS.clone_on_cpu, ps_tasks,
                         worker_job_name, is_chief, FLAGS.train_dir)
     except KeyboardInterrupt:
-          print("ctrl c END")
+          print("ctrl c END1")
     finally:
-          for q in create_done_queues(worker_replicas):
+          print("tf.Session")
+          sess = tf.Session(server.target)
+          print("end create_done_queues:"+str(worker_replicas))
+          for q in create_done_queues(worker_replicas,ps_tasks):
+            print("enqueue")
             sess.run(q.enqueue(1))
 
 if __name__ == '__main__':
