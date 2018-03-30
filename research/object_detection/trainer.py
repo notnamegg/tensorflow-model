@@ -208,6 +208,7 @@ def train(create_tensor_dict_fn, create_model_fn, train_config, master, task,
       the default graph.
   """
 
+  print("trainer.train")
   detection_model = create_model_fn()
   data_augmentation_options = [
       preprocessor_builder.build(step)
@@ -348,12 +349,11 @@ def train(create_tensor_dict_fn, create_model_fn, train_config, master, task,
     # Soft placement allows placing on CPU ops without GPU implementation.
     session_config = tf.ConfigProto(allow_soft_placement=True,
                                     log_device_placement=False)
-
+    session_config.gpu_options.allow_growth = True
     # Save checkpoints regularly.
     keep_checkpoint_every_n_hours = train_config.keep_checkpoint_every_n_hours
     saver = tf.train.Saver(
         keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours)
-
     slim.learning.train(
         train_tensor,
         logdir=train_dir,
