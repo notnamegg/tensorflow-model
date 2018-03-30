@@ -1,4 +1,4 @@
-FROM gcr.io/tensorflow/tensorflow:1.7.0-gpu-py3
+FROM gcr.io/tensorflow/tensorflow:1.5.0-gpu-py3
 MAINTAINER notname "notname@gmail.com"
 ENV data /data
 ENV reponame notnamegg-tensorflow-Distributed-training
@@ -21,7 +21,7 @@ RUN touch /root/.ssh/known_hosts
 RUN ssh-keyscan github.com >> /root/.ssh/known_hosts
 
 # clone latest code
-RUN username=$(whoami) && git config --global user.email "${username}@github.com"
+RUN username=$(whoami) && git config --global user.email "${username}@github.com" 
 RUN username=$(whoami) && git config --global user.name "${username}"
 RUN git config --global push.default simple
 RUN git clone https://github.com/notnamegg/${reponame}.git
@@ -30,9 +30,9 @@ RUN cd ${reponame} && git submodule update
 RUN pip install cython
 RUN cd ${reponame}/cocoapi/PythonAPI && make && make install && python setup.py install
 RUN cd ${reponame}/models && git remote add github https://github.com/notnamegg/tensorflow-model.git
-RUN cd ${reponame}/models && git branch r1.7 && git checkout master
+RUN cd ${reponame}/models && git branch r1.5 && git checkout r1.5
 RUN cd ${reponame}/models && git fetch github
-RUN cd ${reponame}/models && git pull github master
+RUN cd ${reponame}/models && git pull github r1.5
 # install object_detection 
 RUN cd ${reponame}/models/research && protoc object_detection/protos/*.proto --python_out=.
 RUN echo "export RESEARCHPATH=${data}/${reponame}/models/research" >> /root/.bashrc
