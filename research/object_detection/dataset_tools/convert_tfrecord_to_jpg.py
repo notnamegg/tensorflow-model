@@ -13,8 +13,14 @@ import tensorflow as tf
 from PIL import Image  
 #import matplotlib.pyplot as plt
 import numpy as np
-
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
+from object_detection.utils import visualization_utils as vis_util
+from matplotlib.backends.backend_pdf import PdfPages
 flags = tf.app.flags
+flags.DEFINE_boolean('pdf', False,
+                        'Whether to save tfrecord as pdf. default: False.')
 flags.DEFINE_string('tfrecord', '', 'filename for tfrecord.')
 flags.DEFINE_string('output_filepath', '.', 'Path to output jpg')
 FLAGS = flags.FLAGS
@@ -49,6 +55,8 @@ def main(_):
     #label = tf.cast(features['image/object/class/label'], tf.int32)
     if not os.path.exists(FLAGS.output_filepath):
         os.makedirs(FLAGS.output_filepath)
+    if FLAGS.pdf:
+        pp = PdfPages(FLAGS.output_filepath+'/out.pdf')
     with tf.Session() as sess:
         init_op = tf.initialize_all_variables()
         sess.run(init_op)
@@ -72,6 +80,7 @@ def main(_):
         t_ym = tf.reshape(d_ym, [-1])
         t_yM = tf.reshape(d_yM, [-1])
         boxid=0
+        #axarr.autoscale(True)
         for i in range(number):
             #image = tf.reshape(image, [w, h, 3])
             example, ls ,w,h,xm,xM,ym,yM= sess.run([image,d_label,t_w,t_h,t_xm,t_xM,t_ym,t_yM])
@@ -81,12 +90,31 @@ def main(_):
             #with tf.gfile.GFile(str(i)+'_'+str(w)+'x'+str(h)+'_'+'_'+'Label_'+str(l)+'_'+str(xm)+','+str(xM)+','+str(ym)+','+str(yM)+'_'+'.jpg', 'wb') as f:
             #with tf.gfile.GFile(folder+"/"+str(i)+'['+str(w)+'x'+str(h)+']'+'Label_'+str(l)+'@['+str(xm*w)+','+str(ym*h)+']to['+str(xM*w)+','+str(yM*h)+'].jpg', 'wb') as f:
             # print(str(ls)+','+str(len(xm))+','+str(len(xm))+','+str(len(xm))+','+str(len(xm)))
+            boxes={}
             for idx, l in enumerate(ls):
-              with tf.gfile.GFile(folder+"/"+str(boxid)+'['+str(w)+'x'+str(h)+']'+'Label_'+str(l)+'@[' \
-                  +str(int(round(xm[idx]*w)))+','+str(int(round(ym[idx]*h)))+']to['+str(int(round(xM[idx]*w)))+','+str(int(round(yM[idx]*h)))+'].jpg', 'wb') as f:
+              if l not in boxes:
+                boxes[l]=[]
+              bx=[ym[idx],xm[idx],yM[idx],xM[idx]]
+              boxes[l].append(bx)
+              newname=folder+"/"+str(boxid)+'['+str(w)+'x'+str(h)+']'+'Label_'+str(l)+'@[' \
+                      +str(int(round(xm[idx]*w)))+','+str(int(round(ym[idx]*h)))+']to['  \
+                      +str(int(round(xM[idx]*w)))+','+str(int(round(yM[idx]*h)))+'].jpg'
+              with tf.gfile.GFile(newname, 'wb') as f:
                 f.write(encode_image_jpg.eval())
                 boxid += 1
+            if FLAGS.pdf:
+              num=len(boxes)
+              im = Image.open(newname)
+              for idx, l in enumerate(boxes):
+                c= int(idx*255.0/num)
+                vis_util.draw_bounding_boxes_on_image(im, np.array(boxes[l]),color=c)
+              plt.imshow(im)
+              pp.savefig()
+            #input('press return to continue')
+            #input('press return to continue')
             print(str(l)+":"+str(w)+"x"+str(h))
+        if FLAGS.pdf:
+          pp.close()
         coord.request_stop()
         coord.join(threads)
     
