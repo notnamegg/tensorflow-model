@@ -117,10 +117,18 @@ def main(_):
             if FLAGS.pdf:
               num=len(label)
               with Image.open(newname) as im:
+                shape=len(np.array(im).shape)
+                #print(shape)
                 for idx, l in enumerate(bl):
                   lid = label.index(l[0])
-                  gb= int(lid*255.0/num)
-                  c=(255,255-gb,gb)
+                  if shape == 3:
+                      gb= int(lid*255.0/num)
+                      c=(255,255-gb,gb)
+                  elif shape == 2:
+                      c=int(255-(lid*128.0/num))
+                  #print(bx[idx])
+                  #print(bl[idx])
+                  #print(c)
                   vis_util.draw_bounding_boxes_on_image(im, np.array([bx[idx]]),color=c,display_str_list_list=[bl[idx]])
                 plt.imshow(im)
                 pp.savefig()
