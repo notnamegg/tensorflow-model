@@ -3,6 +3,10 @@ MAINTAINER notname "notname@gmail.com"
 ENV data /data
 ENV reponame notnamegg-tensorflow-Distributed-training
 WORKDIR ${data}
+
+#Add protobuf
+RUN add-apt-repository ppa:maarten-fonville/protobuf -y
+
 # Update aptitude with new repo
 RUN apt-get update
 
