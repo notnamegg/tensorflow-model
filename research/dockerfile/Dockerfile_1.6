@@ -30,9 +30,9 @@ RUN cd ${reponame} && git submodule update
 RUN pip install cython
 RUN cd ${reponame}/cocoapi/PythonAPI && make && make install && python setup.py install
 RUN cd ${reponame}/models && git remote add github https://github.com/notnamegg/tensorflow-model.git
-RUN cd ${reponame}/models && git branch r1.6 && git checkout master
+RUN cd ${reponame}/models && git branch r1.6 && git checkout r1.6
 RUN cd ${reponame}/models && git fetch github
-RUN cd ${reponame}/models && git pull github master
+RUN cd ${reponame}/models && git pull github r1.6
 # install object_detection 
 RUN cd ${reponame}/models/research && protoc object_detection/protos/*.proto --python_out=.
 RUN echo "export RESEARCHPATH=${data}/${reponame}/models/research" >> /root/.bashrc

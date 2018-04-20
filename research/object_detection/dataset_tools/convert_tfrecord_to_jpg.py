@@ -17,12 +17,14 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from object_detection.utils import visualization_utils as vis_util
+from object_detection.utils import label_map_util
 from matplotlib.backends.backend_pdf import PdfPages
 flags = tf.app.flags
 flags.DEFINE_boolean('pdf', False,
                         'Whether to save tfrecord as pdf. default: False.')
 flags.DEFINE_string('tfrecord', '', 'filename for tfrecord.')
 flags.DEFINE_string('output_filepath', '.', 'Path to output jpg')
+flags.DEFINE_string('pbtxt', '', 'Path to pbtxt')
 FLAGS = flags.FLAGS
 
 def number_of_jpeg(filename):
@@ -57,6 +59,10 @@ def main(_):
         os.makedirs(FLAGS.output_filepath)
     if FLAGS.pdf:
         pp = PdfPages(FLAGS.output_filepath+'/out.pdf')
+    category_index = None
+    if FLAGS.pbtxt:
+        category_index = label_map_util.create_category_index_from_labelmap(FLAGS.pbtxt)
+        print(category_index)
     with tf.Session() as sess:
         init_op = tf.initialize_all_variables()
         sess.run(init_op)
@@ -87,32 +93,47 @@ def main(_):
             img_data_jpg = tf.image.convert_image_dtype(example, dtype=tf.uint8) 
             encode_image_jpg = tf.image.encode_jpeg(img_data_jpg)
             folder = FLAGS.output_filepath
-            #with tf.gfile.GFile(str(i)+'_'+str(w)+'x'+str(h)+'_'+'_'+'Label_'+str(l)+'_'+str(xm)+','+str(xM)+','+str(ym)+','+str(yM)+'_'+'.jpg', 'wb') as f:
-            #with tf.gfile.GFile(folder+"/"+str(i)+'['+str(w)+'x'+str(h)+']'+'Label_'+str(l)+'@['+str(xm*w)+','+str(ym*h)+']to['+str(xM*w)+','+str(yM*h)+'].jpg', 'wb') as f:
-            # print(str(ls)+','+str(len(xm))+','+str(len(xm))+','+str(len(xm))+','+str(len(xm)))
-            boxes={}
+            bx=[]
+            bl=[]
+            label=[]
             for idx, l in enumerate(ls):
-              if l not in boxes:
-                boxes[l]=[]
-              bx=[ym[idx],xm[idx],yM[idx],xM[idx]]
-              boxes[l].append(bx)
-              newname=folder+"/"+str(boxid)+'['+str(w)+'x'+str(h)+']'+'Label_'+str(l)+'@[' \
+              #if l not in label:
+                #label.append(str(l))
+              bx.append([ym[idx],xm[idx],yM[idx],xM[idx]])
+              #bl.append([str(l)])
+              labelname=str(l)
+              if category_index:
+                 labeldic=category_index[int(l)]
+                 labelname=labeldic['name']
+              bl.append([labelname])
+              if labelname not in label:
+                label.append(labelname)
+              newname=folder+"/"+str(boxid)+'['+str(w)+'x'+str(h)+']'+'Label_'+labelname+'@[' \
                       +str(int(round(xm[idx]*w)))+','+str(int(round(ym[idx]*h)))+']to['  \
                       +str(int(round(xM[idx]*w)))+','+str(int(round(yM[idx]*h)))+'].jpg'
               with tf.gfile.GFile(newname, 'wb') as f:
                 f.write(encode_image_jpg.eval())
                 boxid += 1
             if FLAGS.pdf:
-              num=len(boxes)
-              im = Image.open(newname)
-              for idx, l in enumerate(boxes):
-                c= int(idx*255.0/num)
-                vis_util.draw_bounding_boxes_on_image(im, np.array(boxes[l]),color=c)
-              plt.imshow(im)
-              pp.savefig()
+              num=len(label)
+              with Image.open(newname) as im:
+                shape=len(np.array(im).shape)
+                #print(shape)
+                for idx, l in enumerate(bl):
+                  lid = label.index(l[0])
+                  if shape == 3:
+                      gb= int(lid*255.0/num)
+                      c=(255,255-gb,gb)
+                  elif shape == 2:
+                      c=int(255-(lid*128.0/num))
+                  #print(bx[idx])
+                  #print(bl[idx])
+                  #print(c)
+                  vis_util.draw_bounding_boxes_on_image(im, np.array([bx[idx]]),color=c,display_str_list_list=[bl[idx]])
+                plt.imshow(im)
+                pp.savefig()
+                print(str(bl[idx])+":"+str(w)+"x"+str(h))
             #input('press return to continue')
-            #input('press return to continue')
-            print(str(l)+":"+str(w)+"x"+str(h))
         if FLAGS.pdf:
           pp.close()
         coord.request_stop()
