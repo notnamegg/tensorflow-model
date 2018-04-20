@@ -93,6 +93,26 @@ class ConfigUtilTest(tf.test.TestCase):
     self.assertProtoEquals(pipeline_config.eval_input_reader,
                            configs["eval_input_config"])
 
+  def test_create_configs_from_pipeline_proto(self):
+    """Tests creating configs dictionary from pipeline proto."""
+
+    pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
+    pipeline_config.model.faster_rcnn.num_classes = 10
+    pipeline_config.train_config.batch_size = 32
+    pipeline_config.train_input_reader.label_map_path = "path/to/label_map"
+    pipeline_config.eval_config.num_examples = 20
+    pipeline_config.eval_input_reader.queue_capacity = 100
+
+    configs = config_util.create_configs_from_pipeline_proto(pipeline_config)
+    self.assertProtoEquals(pipeline_config.model, configs["model"])
+    self.assertProtoEquals(pipeline_config.train_config,
+                           configs["train_config"])
+    self.assertProtoEquals(pipeline_config.train_input_reader,
+                           configs["train_input_config"])
+    self.assertProtoEquals(pipeline_config.eval_config, configs["eval_config"])
+    self.assertProtoEquals(pipeline_config.eval_input_reader,
+                           configs["eval_input_config"])
+
   def test_create_pipeline_proto_from_configs(self):
     """Tests that proto can be reconstructed from configs dictionary."""
     pipeline_config_path = os.path.join(self.get_temp_dir(), "pipeline.config")
@@ -108,6 +128,23 @@ class ConfigUtilTest(tf.test.TestCase):
     configs = config_util.get_configs_from_pipeline_file(pipeline_config_path)
     pipeline_config_reconstructed = (
         config_util.create_pipeline_proto_from_configs(configs))
+    self.assertEqual(pipeline_config, pipeline_config_reconstructed)
+
+  def test_save_pipeline_config(self):
+    """Tests that the pipeline config is properly saved to disk."""
+    pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
+    pipeline_config.model.faster_rcnn.num_classes = 10
+    pipeline_config.train_config.batch_size = 32
+    pipeline_config.train_input_reader.label_map_path = "path/to/label_map"
+    pipeline_config.eval_config.num_examples = 20
+    pipeline_config.eval_input_reader.queue_capacity = 100
+
+    config_util.save_pipeline_config(pipeline_config, self.get_temp_dir())
+    configs = config_util.get_configs_from_pipeline_file(
+        os.path.join(self.get_temp_dir(), "pipeline.config"))
+    pipeline_config_reconstructed = (
+        config_util.create_pipeline_proto_from_configs(configs))
+
     self.assertEqual(pipeline_config, pipeline_config_reconstructed)
 
   def test_get_configs_from_multiple_files(self):

@@ -36,7 +36,7 @@ import tensorflow.contrib.tensorrt as trt
 from official.resnet import imagenet_preprocessing  # pylint: disable=g-bad-import-order
 
 _GPU_MEM_FRACTION = 0.50
-_WARMUP_NUM_LOOPS = 50
+_WARMUP_NUM_LOOPS = 5
 _LOG_FILE = "log.txt"
 _LABELS_FILE = "labellist.json"
 _GRAPH_FILE = "frozen_graph.pb"
@@ -118,7 +118,8 @@ def batch_from_random(batch_size, output_height=224, output_width=224,
       [batch_size, output_height, output_width, num_channels]
   """
   shape = [batch_size, output_height, output_width, num_channels]
-  return np.random.random_sample(shape)
+  # Make sure we return float32, as float64 will not get cast automatically.
+  return np.random.random_sample(shape).astype(np.float32)
 
 
 ################################################################################
