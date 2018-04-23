@@ -142,6 +142,9 @@ def build(preprocessor_step_config):
   if step_type == 'random_rotation90':
     return (preprocessor.random_rotation90, {})
 
+  if step_type == 'random_rotationeach90':
+    return (preprocessor.random_rotationeach90, {})
+
   if step_type == 'random_crop_image':
     config = preprocessor_step_config.random_crop_image
     return (preprocessor.random_crop_image,

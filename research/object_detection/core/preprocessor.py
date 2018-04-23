@@ -632,6 +632,116 @@ def random_vertical_flip(image,
 
     return tuple(result)
 
+def random_rotationeach90(image,
+                      boxes=None,
+                      masks=None,
+                      keypoints=None,
+                      seed=None,
+                      preprocess_vars_cache=None):
+  """Randomly rotates the image and detections 90 degrees counter-clockwise.
+
+  The probability of rotating the image is 50%. This can be combined with
+  random_horizontal_flip and random_vertical_flip to produce an output with a
+  uniform distribution of the eight possible 90 degree rotation / reflection
+  combinations.
+
+  Args:
+    image: rank 3 float32 tensor with shape [height, width, channels].
+    boxes: (optional) rank 2 float32 tensor with shape [N, 4]
+           containing the bounding boxes.
+           Boxes are in normalized form meaning their coordinates vary
+           between [0, 1].
+           Each row is in the form of [ymin, xmin, ymax, xmax].
+    masks: (optional) rank 3 float32 tensor with shape
+           [num_instances, height, width] containing instance masks. The masks
+           are of the same height, width as the input `image`.
+    keypoints: (optional) rank 3 float32 tensor with shape
+               [num_instances, num_keypoints, 2]. The keypoints are in y-x
+               normalized coordinates.
+    seed: random seed
+    preprocess_vars_cache: PreprocessorCache object that records previously
+                           performed augmentations. Updated in-place. If this
+                           function is called multiple times with the same
+                           non-null cache, it will perform deterministically.
+
+  Returns:
+    image: image which is the same shape as input image.
+
+    If boxes, masks, and keypoints, are not None,
+    the function also returns the following tensors.
+
+    boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
+           Boxes are in normalized form meaning their coordinates vary
+           between [0, 1].
+    masks: rank 3 float32 tensor with shape [num_instances, height, width]
+           containing instance masks.
+    keypoints: rank 3 float32 tensor with shape
+               [num_instances, num_keypoints, 2]
+  """
+
+  def _rot90_image(image,k=1):
+    # flip image
+    image_rotated = tf.image.rot90(image,k)
+    return image_rotated
+
+  with tf.name_scope('RandomRotationeach90', values=[image, boxes]):
+    result = []
+
+    # random variable defining whether to rotate by 90 degrees or not
+    generator_func = functools.partial(tf.random_uniform, [], seed=seed)
+    do_a_random = _get_or_create_preprocess_rand_vars(
+        generator_func, preprocessor_cache.PreprocessorCache.ROTATION90,
+        preprocess_vars_cache)
+    do_a_rot270_random = tf.greater(do_a_random, 0.75)
+    do_a_rot180_random = tf.greater(do_a_random, 0.5)
+    do_a_rot90_random = tf.greater(do_a_random, 0.25)
+
+    # flip image
+    image = tf.cond(do_a_rot90_random,lambda:tf.cond(do_a_rot270_random, lambda: image, lambda:tf.cond(do_a_rot180_random, lambda: image, lambda: _rot90_image(image))),
+                    lambda: image)
+    image = tf.cond(do_a_rot180_random, lambda:tf.cond(do_a_rot270_random, lambda: image, lambda: _rot90_image(image,k=2)),
+                    lambda: image)
+    image = tf.cond(do_a_rot270_random, lambda: _rot90_image(image,k=3),
+                    lambda: image)
+    result.append(image)
+
+    # flip boxes
+    if boxes is not None:
+      boxes = tf.cond(do_a_rot90_random, lambda: _rot90_boxes(boxes),
+                      lambda: boxes)
+      boxes = tf.cond(do_a_rot180_random, lambda: _rot90_boxes(boxes),
+                      lambda: boxes)
+      boxes = tf.cond(do_a_rot270_random, lambda: _rot90_boxes(boxes),
+                      lambda: boxes)
+      result.append(boxes)
+
+    # flip masks
+    if masks is not None:
+      masks = tf.cond(do_a_rot90_random, lambda: _rot90_masks(masks),
+                      lambda: masks)
+      masks = tf.cond(do_a_rot180_random, lambda: _rot90_masks(masks),
+                      lambda: masks)
+      masks = tf.cond(do_a_rot270_random, lambda: _rot90_masks(masks),
+                      lambda: masks)
+      result.append(masks)
+
+    # flip keypoints
+    if keypoints is not None:
+      keypoints = tf.cond(
+          do_a_rot90_random,
+          lambda: keypoint_ops.rot90(keypoints),
+          lambda: keypoints)
+      keypoints = tf.cond(
+          do_a_rot180_random,
+          lambda: keypoint_ops.rot90(keypoints),
+          lambda: keypoints)
+      keypoints = tf.cond(
+          do_a_rot270_random,
+          lambda: keypoint_ops.rot90(keypoints),
+          lambda: keypoints)
+      result.append(keypoints)
+
+    return tuple(result)
 
 def random_rotation90(image,
                       boxes=None,
@@ -3061,6 +3171,12 @@ def get_default_func_arg_map(include_label_scores=False,
           fields.InputDataFields.groundtruth_classes,
           groundtruth_label_scores,
           multiclass_scores,
+          groundtruth_instance_masks,
+          groundtruth_keypoints,
+      ),
+      random_rotationeach90: (
+          fields.InputDataFields.image,
+          fields.InputDataFields.groundtruth_boxes,
           groundtruth_instance_masks,
           groundtruth_keypoints,
       ),
