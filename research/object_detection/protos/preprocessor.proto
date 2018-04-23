@@ -33,6 +33,7 @@ message PreprocessingStep {
     RandomVerticalFlip random_vertical_flip = 25;
     RandomRotation90 random_rotation90 = 26;
     RGBtoGray rgb_to_gray = 27;
+    RandomRotationeach90 random_rotationeach90 = 28;
   }
 }
 
@@ -84,6 +85,9 @@ message RandomVerticalFlip {
 // 50% of the time.
 message RandomRotation90 {}
 
+// Randomly rotates the image and detections by each 90 degrees counter-clockwise
+// 25% of the time.
+message RandomRotationeach90 {}
 // Randomly scales the values of all pixels in the image by some constant value
 // between [minval, maxval], then clip the value to a range between [0, 1.0].
 message RandomPixelValueScale {
