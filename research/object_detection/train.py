@@ -189,19 +189,20 @@ def main(_):
     master = server.target
     print("is_chief:"+str(is_chief))
 
-    try:
-          trainer.train(create_input_dict_fn, model_fn, train_config, master, task,
-                        FLAGS.num_clones, worker_replicas, FLAGS.clone_on_cpu, ps_tasks,
-                        worker_job_name, is_chief, FLAGS.train_dir)
-    except KeyboardInterrupt:
-          print("ctrl c END1")
-    finally:
-          print("tf.Session")
-          sess = tf.Session(server.target)
-          print("end create_done_queues:"+str(worker_replicas))
-          for q in create_done_queues(worker_replicas,ps_tasks):
-            print("enqueue")
-            sess.run(q.enqueue(1))
+  try:
+        trainer.train(create_input_dict_fn, model_fn, train_config, master, task,
+                      FLAGS.num_clones, worker_replicas, FLAGS.clone_on_cpu, ps_tasks,
+                      worker_job_name, is_chief, FLAGS.train_dir)
+  except KeyboardInterrupt:
+        print("ctrl c END1")
+  finally:
+        if worker_replicas >= 1 and ps_tasks > 0:
+            print("tf.Session")
+            sess = tf.Session(server.target)
+            print("end create_done_queues:"+str(worker_replicas))
+            for q in create_done_queues(worker_replicas,ps_tasks):
+              print("enqueue")
+              sess.run(q.enqueue(1))
 
 if __name__ == '__main__':
   tf.app.run()
