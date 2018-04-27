@@ -201,19 +201,22 @@ def visualize_detection_results(result_dict,
       skip_scores=skip_scores,
       skip_labels=skip_labels)
 
+  newtag=tag
+  if len(result_dict[input_fields.filename])>0:
+    newtag=result_dict[input_fields.filename]
   if export_dir:
     if keep_image_id_for_visualization_export and result_dict[fields.
                                                               InputDataFields()
                                                               .key]:
       export_path = os.path.join(export_dir, 'export-{}-{}.png'.format(
-          tag, result_dict[fields.InputDataFields().key]))
+          newtag, result_dict[fields.InputDataFields().key]))
     else:
-      export_path = os.path.join(export_dir, 'export-{}.png'.format(tag))
+      export_path = os.path.join(export_dir, 'export-{}.png'.format(newtag))
     vis_utils.save_image_array_as_png(image, export_path)
 
   summary = tf.Summary(value=[
       tf.Summary.Value(
-          tag=tag,
+          tag=newtag,
           image=tf.Summary.Image(
               encoded_image_string=vis_utils.encode_image_array_as_png_str(
                   image)))
@@ -221,7 +224,7 @@ def visualize_detection_results(result_dict,
   summary_writer = tf.summary.FileWriterCache.get(summary_dir)
   summary_writer.add_summary(summary, global_step)
 
-  logging.info('Detection visualizations written to summary with tag %s.', tag)
+  logging.info('Detection visualizations written to summary with tag %s.', newtag)
 
 
 def _run_checkpoint_once(tensor_dict,
@@ -474,6 +477,7 @@ def repeated_checkpoint_run(tensor_dict,
 
 def result_dict_for_single_example(image,
                                    key,
+                                   filename,
                                    detections,
                                    groundtruth=None,
                                    class_agnostic=False,
@@ -536,6 +540,7 @@ def result_dict_for_single_example(image,
   output_dict = {
       input_data_fields.original_image: image,
       input_data_fields.key: key,
+      input_data_fields.filename: filename,
   }
 
   detection_fields = fields.DetectionResultFields
