@@ -117,6 +117,7 @@ def _extract_predictions_and_losses(model,
   result_dict = eval_util.result_dict_for_single_example(
       original_image,
       input_dict[fields.InputDataFields.source_id],
+      input_dict[fields.InputDataFields.filename],
       detections,
       groundtruth,
       class_agnostic=(
